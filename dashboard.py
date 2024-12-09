@@ -3,6 +3,9 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
 import streamlit as st
 
+# Set the page configuration to wide mode
+st.set_page_config(layout="wide")
+
 @dataclass
 class CultureBaseline:
    purpose = {
@@ -296,13 +299,13 @@ class CultureFitAnalysis:
        logo_col, title_col = st.columns([1, 5])  # Adjust the ratio as needed
 
        with logo_col:
-           st.image("HireBlack.jpg", width=150)  # Adjust the path and width as needed
+           st.image("path/to/logo.png", width=50)  # Adjust the path and width as needed
 
        with title_col:
-           st.title("HireAligned")
+           st.title("Culture Fit Analysis Dashboard")
 
        # Display baseline
-       st.header("Liberty Dental: Organizational Baseline")
+       st.header("Organizational Baseline")
        cols = st.columns(3)
        with cols[0]:
            st.subheader("Purpose")
