@@ -3,9 +3,6 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
 import streamlit as st
 
-# Set the page configuration to wide mode
-st.set_page_config(layout="wide")
-
 @dataclass
 class CultureBaseline:
    purpose = {
@@ -299,13 +296,13 @@ class CultureFitAnalysis:
        logo_col, title_col = st.columns([1, 5])  # Adjust the ratio as needed
 
        with logo_col:
-           st.image("path/to/logo.png", width=50)  # Adjust the path and width as needed
+           st.image("HireBlack.jpg", width=150)  # Adjust the path and width as needed
 
        with title_col:
-           st.title("Culture Fit Analysis Dashboard")
+           st.title("HireAligned")
 
        # Display baseline
-       st.header("Organizational Baseline")
+       st.header("Liberty Dental: Organizational Baseline")
        cols = st.columns(3)
        with cols[0]:
            st.subheader("Purpose")
@@ -321,10 +318,11 @@ class CultureFitAnalysis:
        st.header("Candidate Assessments: Scheduling Coordinator")
        self.sort_candidates()
        
-       for i, candidate in enumerate(self.candidates):
-           if i > 0:  # Add a divider before each candidate (except the first one)
-               st.markdown('<hr style="border: 2px solid #ddd;">', unsafe_allow_html=True)
-            
+       for candidate in self.candidates:
+           st.markdown(
+               f'<div style="border: 1px solid #ddd; padding: 10px; border-radius: 5px; margin-bottom: 10px;">',
+               unsafe_allow_html=True
+           )
            cols = st.columns([3, 1])
            with cols[0]:
                st.subheader(candidate.name)
@@ -346,6 +344,7 @@ class CultureFitAnalysis:
                        unsafe_allow_html=True
                    )
                    st.markdown(f"_{candidate.highlights[category]}_")
+           st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
    dashboard = CultureFitAnalysis()
