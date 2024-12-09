@@ -318,11 +318,10 @@ class CultureFitAnalysis:
        st.header("Candidate Assessments: Scheduling Coordinator")
        self.sort_candidates()
        
-       for candidate in self.candidates:
-           st.markdown(
-               f'<div style="border: 1px solid #ddd; padding: 10px; border-radius: 5px; margin-bottom: 10px;">',
-               unsafe_allow_html=True
-           )
+       for i, candidate in enumerate(self.candidates):
+           if i > 0:  # Add a divider before each candidate (except the first one)
+               st.markdown('<hr style="border: 2px solid #ddd;">', unsafe_allow_html=True)
+            
            cols = st.columns([3, 1])
            with cols[0]:
                st.subheader(candidate.name)
@@ -344,7 +343,6 @@ class CultureFitAnalysis:
                        unsafe_allow_html=True
                    )
                    st.markdown(f"_{candidate.highlights[category]}_")
-           st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
    dashboard = CultureFitAnalysis()
