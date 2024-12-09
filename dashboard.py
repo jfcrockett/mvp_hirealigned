@@ -296,7 +296,7 @@ class CultureFitAnalysis:
        logo_col, title_col = st.columns([1, 5])  # Adjust the ratio as needed
 
        with logo_col:
-           st.image("HireBlack.jpg", width=150)  # Adjust the path and width as needed
+           st.image("./HireBlack.jpg", width=150)  # Adjust the path and width as needed
 
        with title_col:
            st.title("HireAligned")
