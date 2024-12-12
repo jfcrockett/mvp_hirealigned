@@ -31,7 +31,7 @@ def display_candidate_report(candidate_data):
     # Logo and Title in columns
     col1, col2 = st.columns([1, 4])
     with col1:
-        st.image("assets/hireblack.jpg", width=150)  # Adjust path and width as needed
+        st.image("./HireBlack.jpg", width=150)  # Adjust path and width as needed
     with col2:
         st.title("HireAligned Candidate Alignment Report")
     
