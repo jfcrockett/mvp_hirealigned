@@ -2,6 +2,9 @@ import pandas as pd
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
 import streamlit as st
+from pyairtable import Api
+import os
+from dotenv import load_dotenv
 
 @dataclass
 class CultureBaseline:
@@ -27,245 +30,107 @@ class CandidateScore:
    email: Optional[str]
    scores: Dict[str, Union[int, str]]
    highlights: Dict[str, str]
+   suborganization: str
+   role: str
 
 class CultureFitAnalysis:
    def __init__(self):
+       load_dotenv()
        self.baseline = CultureBaseline()
+       self.organization = st.query_params.get("org", "Liberty Dental")
        self.candidates = self._init_candidates()
 
+   def _get_airtable_data(self, table_name):
+       """Get data from Airtable table."""
+       api = Api(os.getenv('AIRTABLE_API_KEY'))
+       base_id = os.getenv('BASE_ID')
+       table = api.table(base_id, table_name)
+       records = table.all()
+       
+       # Create DataFrame with fields
+       if records:
+           df = pd.DataFrame([record['fields'] for record in records])
+           return df
+       return pd.DataFrame()
+
    def _init_candidates(self) -> List[CandidateScore]:
-       return [
-           CandidateScore(
-               name="Ariele Retherford",
-               email="ariele.retherford@outlook.com",
-               scores={"purpose": 8, "people": 9, "priorities": 9},
-               highlights={
-                   "purpose": "Passionate about coordinating and building career impact",
-                   "people": "Strong team collaboration and communication skills", 
-                   "priorities": "Proactive in personal development and time management"
+       """Initialize candidates from Airtable data."""
+       scores_df = self._get_airtable_data("Candidate Scores")
+       responses_df = self._get_airtable_data("Candidate Responses")
+       
+       # Filter responses by organization first
+       responses_df = responses_df[responses_df['Organization'] == self.organization]
+       
+       # Get unique combinations of suborganization and role
+       self.filter_options = sorted(
+           list(set([
+               f"{row['Sub-Organization']} - {row['hidden_role']}" 
+               for _, row in responses_df.iterrows() 
+               if pd.notna(row['Sub-Organization']) and pd.notna(row['hidden_role'])
+           ]))
+       )
+       
+       # Convert 'created' to datetime and sort by it
+       if 'created' in scores_df.columns:
+           scores_df['created'] = pd.to_datetime(scores_df['created'])
+           scores_df = scores_df.sort_values('created', ascending=False)
+           scores_df = scores_df.drop_duplicates(subset=['Name'], keep='first')
+       
+       candidates = []
+       
+       # First, create a mapping of response_id to organization info
+       response_info = {}
+       for _, response in responses_df.iterrows():
+           response_info[response['id']] = {
+               'suborganization': response.get('Sub-Organization', ''),
+               'role': response.get('hidden_role', ''),
+               'email': response.get('email', None)
+           }
+       
+       for _, score_row in scores_df.iterrows():
+           try:
+               response_id = score_row.get('response_id')
+               
+               # Skip if no response_id or if response not in filtered organization
+               if not response_id or response_id not in response_info:
+                   continue
+               
+               # Get organization info from our mapping
+               org_info = response_info[response_id]
+               
+               scores = {
+                   "purpose": score_row.get('purpose score'),
+                   "people": score_row.get('people score'),
+                   "priorities": score_row.get('priority score')
                }
-           ),
-
-           CandidateScore(
-               name="Rajae Penrod",
-               email="rajaestock@yahoo.com",
-               scores={"purpose": 9, "people": 8, "priorities": 8},
-               highlights={
-                   "purpose": "12 years dental experience with focus on patient care",
-                   "people": "Values team achievement and collaborative success",
-                   "priorities": "Strong work-life balance and emergency response"
-               }
-           ),
-
-           CandidateScore(
-               name="Kimberlee Talbot", 
-               email="kimberleetalbot18@gmail.com",
-               scores={"purpose": 8, "people": 8, "priorities": 8},
-               highlights={
-                   "purpose": "Genuine interest in dentistry since high school",
-                   "people": "Shows empathy and understanding with colleagues",
-                   "priorities": "Balanced approach to urgent tasks and family time"
-               }
-           ),
-
-           CandidateScore(
-               name="Brianna Cuevas",
-               email="briannacuevastate@gmail.com", 
-               scores={"purpose": 8, "people": 8, "priorities": 8},
-               highlights={
-                   "purpose": "Focus on creating positive impact and helping others",
-                   "people": "Strong communication and team management skills",
-                   "priorities": "Demonstrates consideration and work-life balance"
-               }
-           ),
-
-           CandidateScore(
-               name="Liberty Burghardt",
-               email="bewentzecl@gmail.com",
-               scores={"purpose": 7, "people": 9, "priorities": 8},
-               highlights={
-                   "purpose": "Creative problem-solver with customer focus",
-                   "people": "Excellence in collaborative environments",
-                   "priorities": "Strong organizational and planning skills"
-               }
-           ),
-
-           CandidateScore(
-               name="Nyla Rattanakone",
-               email="nylarattanakone@gmail.com",
-               scores={"purpose": 7, "people": 8, "priorities": 8},
-               highlights={
-                   "purpose": "Customer service focused with pride in service quality",
-                   "people": "Experience managing high-pressure team situations",
-                   "priorities": "Strong work ethic and adaptability"
-               }
-           ),
-
-           CandidateScore(
-               name="Yamileth Moreno",
-               email="yamilethvargas2003@gmail.com",
-               scores={"purpose": 7, "people": 8, "priorities": 8},
-               highlights={
-                   "purpose": "Strong customer service and communication skills",
-                   "people": "Thrives in team environments during high-stress periods",
-                   "priorities": "Shows initiative and responsibility"
-               }
-           ),
-
-           CandidateScore(
-               name="Andrea Escobar",
-               email="andrea79609@gmail.com",
-               scores={"purpose": 8, "people": 7, "priorities": 8},
-               highlights={
-                   "purpose": "Passionate about helping patients feel confident",
-                   "people": "Strong communication and problem-solving skills",
-                   "priorities": "Shows adaptability and initiative"
-               }
-           ),
-
-           CandidateScore(
-               name="Savanna Pratt",
-               email="Aviepratt8@gmail.com",
-               scores={"purpose": 7, "people": 8, "priorities": 7},
-               highlights={
-                   "purpose": "Focus on developing communication skills",
-                   "people": "Values supportive team environment",
-                   "priorities": "Shows initiative in time management"
-               }
-           ),
-
-           CandidateScore(
-               name="Chelsea Antonson",
-               email="chelsea.antonson@gmail.com",
-               scores={"purpose": 7, "people": 8, "priorities": 7},
-               highlights={
-                   "purpose": "Passion for teaching and learning from others",
-                   "people": "Creates positive work environments",
-                   "priorities": "Strong work ethic and dedication"
-               }
-           ),
-
-           CandidateScore(
-               name="Cheri Moody",
-               email="cheri4443@gmail.com",
-               scores={"purpose": 8, "people": 7, "priorities": 7},
-               highlights={
-                   "purpose": "Strong interest in medical field and helping others",
-                   "people": "Values teamwork and direct communication",
-                   "priorities": "Demonstrates commitment to deadlines"
-               }
-           ),
-
-           CandidateScore(
-               name="Jalizah Kelley",
-               email="Kelleyjalizah@gmail.com",
-               scores={"purpose": 7, "people": 7, "priorities": 8},
-               highlights={
-                   "purpose": "Seeking growth opportunities and new experiences",
-                   "people": "Professional approach to team dynamics",
-                   "priorities": "Strong initiative in skill development"
-               }
-           ),
-
-           CandidateScore(
-               name="Israel Andaverde",
-               email="Andaverdeisrael@gmail.com",
-               scores={"purpose": 7, "people": 7, "priorities": 7},
-               highlights={
-                   "purpose": "Shows initiative and attention to detail",
-                   "people": "Values authentic team relationships",
-                   "priorities": "Demonstrates proactive work ethic"
-               }
-           ),
-
-           CandidateScore(
-               name="Kamaria James",
-               email="kamariamichelle10@gmail.com",
-               scores={"purpose": 7, "people": 7, "priorities": 7},
-               highlights={
-                   "purpose": "Family influence in dental field",
-                   "people": "Experience in conflict resolution",
-                   "priorities": "Shows dedication to responsibilities"
-               }
-           ),
-
-           CandidateScore(
-               name="Tiffany Lupton",
-               email="Luptontiffany1011@gmail.com",
-               scores={"purpose": 8, "people": 7, "priorities": 7},
-               highlights={
-                   "purpose": "19 years dental assisting experience",
-                   "people": "Values cross-training and team learning",
-                   "priorities": "Seeks professional growth opportunities"
-               }
-           ),
-
-           CandidateScore(
-               name="Adrianna Camacho",
-               email="adriannacamacho13@gmail.com",
-               scores={"purpose": 7, "people": 7, "priorities": 7},
-               highlights={
-                   "purpose": "Committed to specialized patient experience",
-                   "people": "Inspired by compassionate team environments",
-                   "priorities": "Motivated to contribute to team success"
-               }
-           ),
-
-           CandidateScore(
-               name="Isela Lopez",
-               email="lopezisela123@icloud.com",
-               scores={"purpose": None, "people": None, "priorities": None},
-               highlights={
-                   "purpose": "Insufficient information provided",
-                   "people": "Unable to assess team compatibility",
-                   "priorities": "Need more details on work style"
-               }
-           ),
-
-           CandidateScore(
-               name="Hailey Raya",
-               email="haileyyazmin@gmail.com",
-               scores={"purpose": None, "people": None, "priorities": None},
-               highlights={
-                   "purpose": "Insufficient information provided",
-                   "people": "Limited data on team interaction style",
-                   "priorities": "Need more details on work priorities"
-               }
-           ),
-
-           CandidateScore(
-               name="Anniss",
-               email=None,
-               scores={"purpose": None, "people": None, "priorities": None},
-               highlights={
-                   "purpose": "No detailed information provided",
-                   "people": "Unable to assess team compatibility",
-                   "priorities": "Insufficient data on work approach"
-               }
-           ),
-
-           CandidateScore(
-               name="Jeff Galica",
-               email="Jgalica27@gmail.com",
-               scores={"purpose": None, "people": None, "priorities": None},
-               highlights={
-                   "purpose": "Limited information available",
-                   "people": "Insufficient data on team interaction",
-                   "priorities": "Need more details on work style"
-               }
-           ),
-
-           CandidateScore(
-               name="Tanya",
-               email=None,
-               scores={"purpose": None, "people": None, "priorities": None},
-               highlights={
-                   "purpose": "No detailed information provided",
-                   "people": "Unable to assess team fit",
-                   "priorities": "Insufficient data for evaluation"
-               }
-           )
-       ]
+               
+               # Convert scores to integers if they're strings
+               scores = {k: int(v) if isinstance(v, str) and v.isdigit() else v 
+                        for k, v in scores.items()}
+               
+               candidate = CandidateScore(
+                   name=score_row.get('Name', 'Unknown'),
+                   email=org_info['email'],
+                   scores=scores,
+                   highlights={
+                       "purpose": score_row.get('purpose description', 'No description available'),
+                       "people": score_row.get('people description', 'No description available'),
+                       "priorities": score_row.get('priority description', 'No description available')
+                   },
+                   suborganization=org_info['suborganization'],
+                   role=org_info['role']
+               )
+               
+               candidates.append(candidate)
+               print(f"Successfully processed candidate: {candidate.name} - {candidate.suborganization} - {candidate.role}")
+               
+           except Exception as e:
+               st.error(f"Error processing candidate: {score_row.get('Name', 'Unknown')} - {str(e)}")
+               print(f"Error details for {score_row.get('Name', 'Unknown')}:")
+               print(f"Score row data: {score_row.to_dict()}")
+               continue
+       
+       return candidates
 
    def get_score_color(self, score: Union[int, str]) -> str:
        if score is None or score == "NA":
@@ -277,12 +142,14 @@ class CultureFitAnalysis:
        return "#FFB6C1"      # light pink
 
    def get_average_score(self, scores: Dict[str, Union[int, str]]) -> Union[float, str]:
-       valid_scores = [score for score in scores.values() if isinstance(score, int)]
+       """Calculate average score, handling NA values."""
+       valid_scores = [score for score in scores.values() if isinstance(score, (int, float))]
        if not valid_scores:
            return "NA"
        return round(sum(valid_scores) / len(valid_scores), 1)
 
    def sort_candidates(self):
+       """Sort candidates by average score, highest first."""
        self.candidates.sort(
            key=lambda x: (
                -1 if isinstance(self.get_average_score(x.scores), str) 
@@ -292,17 +159,30 @@ class CultureFitAnalysis:
        )
 
    def display_dashboard(self):
+       # Create sidebar for filter
+       with st.sidebar:
+           st.title("Filters")
+           
+           # Combined filter for suborganization and role
+           selected_filter = st.selectbox(
+               "Select Team and Role",
+               options=["All"] + self.filter_options
+           )
+
        # Create two columns for the logo and title
-       logo_col, title_col = st.columns([1, 5])  # Adjust the ratio as needed
+       logo_col, title_col = st.columns([1, 5])
 
        with logo_col:
-           st.image("./HireBlack.jpg", width=150)  # Adjust the path and width as needed
+           try:
+               st.image("./HireBlack.jpg", width=150)
+           except:
+               st.write("HireAligned")
 
        with title_col:
-           st.title("HireAligned")
+           st.title(f"HireAligned - {self.organization}")
 
        # Display baseline
-       st.header("Liberty Dental: Organizational Baseline")
+       st.header(f"{self.organization}: Organizational Baseline")
        cols = st.columns(3)
        with cols[0]:
            st.subheader("Purpose")
@@ -314,12 +194,29 @@ class CultureFitAnalysis:
            st.subheader("Priorities")
            st.write(self.baseline.priorities["time"])
 
+       # Filter candidates based on selection
+       filtered_candidates = self.candidates
+       if selected_filter != "All":
+           suborg, role = selected_filter.split(" - ")
+           filtered_candidates = [
+               c for c in filtered_candidates 
+               if c.suborganization == suborg and c.role == role
+           ]
+
+       # Sort filtered candidates by average score
+       filtered_candidates.sort(
+           key=lambda x: (
+               -1 if isinstance(self.get_average_score(x.scores), str) 
+               else self.get_average_score(x.scores)
+           ),
+           reverse=True
+       )
+
        # Display candidates
-       st.header("Candidate Assessments: Scheduling Coordinator")
-       self.sort_candidates()
+       st.header(f"Candidate Assessments: {selected_filter}")
        
-       for i, candidate in enumerate(self.candidates):
-           if i > 0:  # Add a divider before each candidate (except the first one)
+       for i, candidate in enumerate(filtered_candidates):
+           if i > 0:
                st.markdown('<hr style="border: 2px solid #ddd;">', unsafe_allow_html=True)
             
            cols = st.columns([3, 1])
